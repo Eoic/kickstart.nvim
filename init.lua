@@ -168,6 +168,10 @@ vim.opt.confirm = true
 --  See `:help hlsearch`
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
+-- Saving files.
+vim.keymap.set("n", "<C-s>", ":w<CR>", { silent = true })
+vim.keymap.set("i", "<C-s>", "<Esc>:w<CR>a", { silent = true })
+
 -- Diagnostic keymaps
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
 
