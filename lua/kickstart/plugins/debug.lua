@@ -95,8 +95,8 @@ return {
       -- online, please don't ask me how to install them :)
       ensure_installed = {
         -- Update this to ensure that you have the debuggers for the langs you want
-        -- 'delve',
         'python',
+        'codelldb',
       },
     }
 
@@ -157,5 +157,27 @@ return {
     end
 
     require('dap-python').setup(get_python_path())
+
+    dap.configurations.c = {
+      {
+        name = 'Launch',
+        type = 'codelldb',
+        request = 'launch',
+        program = function()
+          local result = nil
+          local handle = io.popen 'find out -maxdepth 2 -type f -executable | head -n 1'
+
+          if handle ~= nil then
+            result = handle:read '*l'
+            handle:close()
+          end
+
+          return result or vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/out/Debug/', 'file')
+        end,
+        cwd = '${workspaceFolder}',
+        stopOnEntry = false,
+        terminal = 'integrated',
+      },
+    }
   end,
 }
