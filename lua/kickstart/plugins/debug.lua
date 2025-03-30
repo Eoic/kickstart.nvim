@@ -179,5 +179,26 @@ return {
         terminal = 'integrated',
       },
     }
+
+    dap.configurations.python = {
+      {
+        name = 'Launch Python Script',
+        type = 'python',
+        request = 'launch',
+        program = function()
+          return vim.fn.input('Path to script: ', vim.fn.getcwd() .. '/', 'file')
+        end,
+        console = 'integratedTerminal',
+      },
+      {
+        name = 'Launch Python Module',
+        type = 'python',
+        request = 'launch',
+        module = function()
+          return vim.fn.input('Module: ', '')
+        end,
+        console = 'integratedTerminal',
+      },
+    }
   end,
 }
