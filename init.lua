@@ -98,6 +98,35 @@ vim.g.have_nerd_font = true
 -- NOTE: You can change these options as you wish!
 --  For more options, you can see `:help option-list`
 
+-- LSP position params compatibility (Nvim 0.11):
+-- Some plugins still call vim.lsp.util.make_position_params without
+-- specifying a position_encoding. Inject a sensible default to avoid warnings.
+do
+  local util = vim.lsp.util
+  local orig = util.make_position_params
+  util.make_position_params = function(win, opts)
+    -- Support legacy signature where a string offset_encoding was passed
+    if type(opts) == 'string' then
+      opts = { position_encoding = opts }
+    else
+      opts = opts or {}
+    end
+
+  if not opts.position_encoding then
+      local buf = vim.api.nvim_win_get_buf(win or 0)
+      local clients = vim.lsp.get_clients { bufnr = buf }
+      -- Prefer the first client's encoding if available, else default to utf-16
+      local enc = 'utf-16'
+      if clients and clients[1] then
+        enc = clients[1].offset_encoding or enc
+      end
+      opts.position_encoding = enc
+    end
+  -- Original API expects (win, encoding) even on 0.11 in most paths; pass a string
+  return orig(win, opts.position_encoding)
+  end
+end
+
 -- Lines and line numbers.
 vim.opt.number = true
 vim.opt.relativenumber = true
@@ -209,7 +238,8 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   desc = 'Highlight when yanking (copying) text',
   group = vim.api.nvim_create_augroup('kickstart-highlight-yank', { clear = true }),
   callback = function()
-    vim.highlight.on_yank()
+    -- vim.highlight is deprecated; use vim.hl instead
+    vim.hl.on_yank()
   end,
 })
 
@@ -381,7 +411,7 @@ require('lazy').setup({
                 strategy = {
                   'toggleterm',
                   direction = 'horizontal',
-                  autos_croll = true,
+                  auto_scroll = true,
                   quit_on_exit = 'success',
                 },
               }, -- options to pass into the `overseer.new_task` command
@@ -758,7 +788,8 @@ require('lazy').setup({
           -- This may be unwanted, since they displace some of your code
           if client and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_inlayHint, event.buf) then
             map('<leader>th', function()
-              vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
+              local enabled = vim.lsp.inlay_hint.is_enabled { bufnr = event.buf }
+              vim.lsp.inlay_hint.enable(not enabled, { bufnr = event.buf })
             end, '[T]oggle Inlay [H]ints')
           end
         end,
@@ -865,6 +896,7 @@ require('lazy').setup({
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
         'stylua', -- Used to format Lua code
+        'ruff', -- CLI for Python formatting via conform's ruff_format
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
@@ -921,7 +953,7 @@ require('lazy').setup({
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
         -- python = { "isort", "black" },
-        python = { 'ruff' },
+        python = { 'ruff_format' },
         -- You can use 'stop_after_first' to run the first available formatter from the list
         -- javascript = { "prettierd", "prettier", stop_after_first = true },
       },
